@@ -18,8 +18,8 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip curl
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Disable default Apache site and MPM conflict
+RUN a2dismod mpm_event && a2enmod mpm_prefork rewrite ssl headers
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -41,13 +41,14 @@ RUN mkdir -p /var/www/html/_sessions \
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader || echo "Composer install skipped"
 
-# Configure Apache for the application
-RUN echo '<Directory /var/www/html>\n\
-    Options -Indexes +FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' > /etc/apache2/conf-available/cyborx.conf \
-    && a2enconf cyborx
+# Configure Apache
+RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf && \
+    echo '<Directory /var/www/html>' > /etc/apache2/conf-available/cyborx.conf && \
+    echo '    Options -Indexes +FollowSymLinks' >> /etc/apache2/conf-available/cyborx.conf && \
+    echo '    AllowOverride All' >> /etc/apache2/conf-available/cyborx.conf && \
+    echo '    Require all granted' >> /etc/apache2/conf-available/cyborx.conf && \
+    echo '</Directory>' >> /etc/apache2/conf-available/cyborx.conf && \
+    a2enconf cyborx
 
 # Expose port
 EXPOSE 80
