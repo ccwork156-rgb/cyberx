@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
 # Install extensions
 RUN apt-get update && apt-get install -y \
@@ -19,21 +19,7 @@ RUN mkdir -p _sessions storage/logs \
     && chmod -R 777 _sessions storage vendor \
     && composer install --no-dev --optimize-autoloader || true
 
-# Fix MPM conflict - disable all MPMs first, then enable prefork
-RUN a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true \
-    && a2enmod mpm_prefork rewrite ssl headers \
-    && echo 'ServerName localhost' >> /etc/apache2/apache2.conf \
-    && echo 'export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"' >> /etc/apache2/envvars \
-    && echo 'export TELEGRAM_BOT_USERNAME="${TELEGRAM_BOT_USERNAME}"' >> /etc/apache2/envvars \
-    && echo 'export TELEGRAM_ADMIN_USERNAME="${TELEGRAM_ADMIN_USERNAME}"' >> /etc/apache2/envvars \
-    && echo 'export TELEGRAM_ADMIN_ID="${TELEGRAM_ADMIN_ID}"' >> /etc/apache2/envvars \
-    && echo 'export TELEGRAM_ANNOUNCE_CHAT_ID="${TELEGRAM_ANNOUNCE_CHAT_ID}"' >> /etc/apache2/envvars \
-    && echo 'export APP_DEBUG="${APP_DEBUG}"' >> /etc/apache2/envvars \
-    && echo 'export APP_HOST="${APP_HOST}"' >> /etc/apache2/envvars \
-    && echo 'export DB_DSN="${DB_DSN}"' >> /etc/apache2/envvars \
-    && echo 'export DB_USER="${DB_USER}"' >> /etc/apache2/envvars \
-    && echo 'export DB_PASS="${DB_PASS}"' >> /etc/apache2/envvars
-
 EXPOSE 8080
 
-CMD ["apache2-foreground"]
+# Start PHP built-in server with all environment variables
+CMD env | grep -E 'TELEGRAM_|APP_|DB_|MYSQL' && php -S 0.0.0.0:8080 -t /var/www/html
