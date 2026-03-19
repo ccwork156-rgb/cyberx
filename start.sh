@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Get port from Railway or default to 80
-PORT="${PORT:-80}"
+# Railway uses port 8080 by default
+PORT="${PORT:-8080}"
 
 # Update Apache ports.conf
 echo "Listen $PORT" > /etc/apache2/ports.conf
@@ -17,6 +17,8 @@ cat > /etc/apache2/sites-enabled/000-default.conf << EOF
     </Directory>
 </VirtualHost>
 EOF
+
+echo "Starting Apache on port $PORT"
 
 # Start Apache
 exec /usr/sbin/apache2ctl -D FOREGROUND

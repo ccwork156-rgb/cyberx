@@ -35,10 +35,10 @@ WORKDIR /var/www/html
 # Copy everything
 COPY . .
 
-# Clean Apache config and create our VirtualHost that listens on PORT env var
+# Clean Apache config - will be updated by start.sh at runtime
 RUN rm -rf /etc/apache2/sites-enabled/* \
-    && echo 'Listen ${PORT:80}' > /etc/apache2/ports.conf \
-    && echo '<VirtualHost *:${PORT:80}>' > /etc/apache2/sites-enabled/000-default.conf \
+    && echo 'Listen 8080' > /etc/apache2/ports.conf \
+    && echo '<VirtualHost *:8080>' > /etc/apache2/sites-enabled/000-default.conf \
     && echo '    DocumentRoot /var/www/html' >> /etc/apache2/sites-enabled/000-default.conf \
     && echo '    <Directory /var/www/html>' >> /etc/apache2/sites-enabled/000-default.conf \
     && echo '        Options -Indexes +FollowSymLinks' >> /etc/apache2/sites-enabled/000-default.conf \
