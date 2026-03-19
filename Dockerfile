@@ -31,8 +31,9 @@ COPY . .
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
-# Enable Nginx site
-RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+# Enable Nginx site (remove existing if present)
+RUN rm -f /etc/nginx/sites-enabled/default \
+    && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Create necessary directories
 RUN mkdir -p /var/www/html/_sessions \
