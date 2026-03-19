@@ -1,6 +1,7 @@
 FROM debian:bookworm-slim
 
-# Install PHP 8.2 Apache with all dependencies in one layer
+# Install PHP 8.2 Apache with all dependencies
+# Note: pcntl, exif, bcmath are included in base php8.2 packages
 RUN apt-get update && apt-get install -y \
     apache2 \
     libapache2-mod-php8.2 \
@@ -13,10 +14,7 @@ RUN apt-get update && apt-get install -y \
     php8.2-gd \
     php8.2-mbstring \
     php8.2-curl \
-    php8.2-pdo \
     php8.2-bcmath \
-    php8.2-exif \
-    php8.2-pcntl \
     git \
     curl \
     unzip \
