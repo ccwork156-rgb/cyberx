@@ -21,5 +21,5 @@ RUN mkdir -p _sessions storage/logs \
 
 EXPOSE 8080
 
-# Start PHP built-in server
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "/var/www/html"]
+# Start PHP built-in server with router
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "/var/www/html", "/var/www/html/router.php"]
