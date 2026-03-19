@@ -1,11 +1,15 @@
-# CyborX .htaccess for Apache-style URL rewriting
-# For use with PHP built-in server that supports it
+# .htaccess for Apache-style URL rewriting
+# Also works as documentation for URL structure
 
 RewriteEngine On
+RewriteBase /
 
-# Don't rewrite for existing files
+# Don't rewrite existing files
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Send all other requests to index.php
-RewriteRule ^(.*)$ index.php?path=$1 [QSA,L]
+# Redirect /app/* to index.php?path=app/*
+RewriteRule ^app/(.*)$ index.php?path=app/$1 [QSA,L]
+
+# Redirect root to dashboard
+RewriteRule ^$ index.php?path=dashboard [QSA,L]
