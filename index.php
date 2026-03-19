@@ -2,6 +2,21 @@
 declare(strict_types=1);
 require_once __DIR__ . '/app/Bootstrap.php';
 
+// Get path from router or REQUEST_URI
+$path = $_GET['path'] ?? '';
+if (empty($path)) {
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+    $path = trim($path, '/');
+    // Remove 'app' prefix if present
+    if (strpos($path, 'app/') === 0) {
+        $path = substr($path, 4);
+    }
+}
+// Default to dashboard
+if (empty($path)) {
+    $path = 'dashboard';
+}
+
 $botUsername   = $_ENV['TELEGRAM_BOT_USERNAME'] ?? ''; // without @
 $requireAllow  = filter_var($_ENV['TELEGRAM_REQUIRE_ALLOWLIST'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
 $announceChat  = $_ENV['TELEGRAM_ANNOUNCE_CHAT_ID'] ?? '-1003278376068';
