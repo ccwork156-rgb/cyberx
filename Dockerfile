@@ -1,7 +1,9 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
-# Install system dependencies
+# Install Apache and system dependencies
 RUN apt-get update && apt-get install -y \
+    apache2 \
+    libapache2-mod-php8.2 \
     git \
     curl \
     libpng-dev \
@@ -18,9 +20,6 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip curl
 
-# Disable default Apache site and MPM conflict
-RUN a2dismod mpm_event && a2enmod mpm_prefork rewrite ssl headers
-
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -29,6 +28,19 @@ WORKDIR /var/www/html
 
 # Copy application files
 COPY . .
+
+# Configure Apache properly
+RUN rm -f /etc/apache2/sites-enabled/000-default.conf && \
+    echo '<VirtualHost *:80>' > /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '    DocumentRoot /var/www/html' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '    <Directory /var/www/html>' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '        Options -Indexes +FollowSymLinks' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '        AllowOverride All' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '        Require all granted' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '    </Directory>' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    echo '</VirtualHost>' >> /etc/apache2/sites-enabled/cyborx.conf && \
+    a2enmod rewrite ssl headers && \
+    echo 'ServerName localhost' >> /etc/apache2/apache2.conf
 
 # Set permissions
 RUN mkdir -p /var/www/html/_sessions \
@@ -41,17 +53,8 @@ RUN mkdir -p /var/www/html/_sessions \
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader || echo "Composer install skipped"
 
-# Configure Apache
-RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf && \
-    echo '<Directory /var/www/html>' > /etc/apache2/conf-available/cyborx.conf && \
-    echo '    Options -Indexes +FollowSymLinks' >> /etc/apache2/conf-available/cyborx.conf && \
-    echo '    AllowOverride All' >> /etc/apache2/conf-available/cyborx.conf && \
-    echo '    Require all granted' >> /etc/apache2/conf-available/cyborx.conf && \
-    echo '</Directory>' >> /etc/apache2/conf-available/cyborx.conf && \
-    a2enconf cyborx
-
 # Expose port
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Start Apache in foreground
+CMD ["apache2ctl", "-D", "FOREGROUND"]
