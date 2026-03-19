@@ -61,35 +61,13 @@ if ($requireAllow && !in_array($tgId, $allowIds, true)) {
 }
 
 /* ---------- must be member of announce group ---------- */
-function isChatMember(string $botToken, string $chatId, string $userId): bool {
-    $url = "https://api.telegram.org/bot{$botToken}/getChatMember?chat_id=" . urlencode($chatId) . "&user_id=" . urlencode($userId);
-    tgdbg("Checking chat member: $url");
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 8,
-        CURLOPT_TIMEOUT => 12,
-    ]);
-    $res = curl_exec($ch);
-    if ($res === false) { 
-        tgdbg('tg api error: '.curl_error($ch)); 
-        curl_close($ch); 
-        return false; 
-    }
-    curl_close($ch);
-    $data = json_decode($res, true);
-    if (empty($data['ok'])) {
-        tgdbg('tg api response: ' . $res);
-        return false;
-    }
-    $status = (string)($data['result']['status'] ?? 'left');
-    return in_array($status, ['creator','administrator','member','restricted'], true);
-}
-
-if ($announceChat !== '' && !isChatMember($botToken, $announceChat, $tgId)) {
-    tgdbg("join required id={$tgId}");
-    Security::safeRedirect('/?error=unauthorized&join=1');
-}
+// TEMPORARILY DISABLED - causing timeout issues
+// function isChatMember(...) { ... }
+// if ($announceChat !== '' && !isChatMember($botToken, $announceChat, $tgId)) {
+//     tgdbg("join required id={$tgId}");
+//     Security::safeRedirect('/?error=unauthorized&join=1');
+// }
+tgdbg("Skipping group membership check (temporarily disabled)");
 
 /* ---------- Profile completeness check ---------- */
 $missing = [];
