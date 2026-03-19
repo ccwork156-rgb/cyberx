@@ -18,10 +18,25 @@ function tgdbg(string $m): void {
 $botToken = $_ENV['TELEGRAM_BOT_TOKEN'] ?? '';
 $requireAllow = filter_var($_ENV['TELEGRAM_REQUIRE_ALLOWLIST'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
 $allowIds = Telegram::parseAllowlist($_ENV['TELEGRAM_ALLOWED_IDS'] ?? '');
-$announceChat = $_ENV['TELEGRAM_ANNOUNCE_CHAT_ID'] ?? '-1002552641928'; // MUST be member of this chat
+$announceChat = $_ENV['TELEGRAM_ANNOUNCE_CHAT_ID'] ?? '-1003278376068'; // MUST be member of this chat
+
+/* Debug - log env vars */
+tgdbg("Bot token set: " . ($botToken !== '' ? 'yes' : 'no'));
+tgdbg("Announce chat: {$announceChat}");
+
 /* Guards */
-if ($botToken === '' || !isset($_GET['hash'])) { tgdbg('400 missing token/hash'); http_response_code(400); exit; }
-if (!Telegram::verify($_GET, $botToken, 900)) { tgdbg('400 verify fail'); http_response_code(400); exit; }
+if ($botToken === '' || !isset($_GET['hash'])) { 
+    tgdbg('400 missing token/hash - token: ' . ($botToken === '' ? 'empty' : 'set')); 
+    http_response_code(400); 
+    echo json_encode(['error' => 'missing_config', 'token_set' => $botToken !== '', 'hash_set' => isset($_GET['hash'])]);
+    exit; 
+}
+if (!Telegram::verify($_GET, $botToken, 900)) { 
+    tgdbg('400 verify fail'); 
+    http_response_code(400); 
+    echo json_encode(['error' => 'verify_failed']);
+    exit; 
+}
 /* Extract from Telegram Login Widget */
 $tgId = (string)($_GET['id'] ?? '');
 $tUser = (string)($_GET['username'] ?? '');
