@@ -8,24 +8,22 @@ if (file_exists(__DIR__ . $uri) && is_file(__DIR__ . $uri) &&
     return false;
 }
 
-// API routes
+// API routes - handle directly
 if (strpos($uri, '/api/') === 0) {
-    $file = __DIR__ . $uri . '.php';
+    $file = __DIR__ . $uri;
+    if (file_exists($file . '.php')) {
+        require $file . '.php';
+        exit;
+    }
     if (file_exists($file)) {
         require $file;
         exit;
     }
-    // Try without .php extension
-    $uri_parts = explode('/', trim($uri, '/'));
-    if (count($uri_parts) >= 2) {
-        $file = __DIR__ . '/api/' . $uri_parts[1] . '.php';
-        if (file_exists($file)) {
-            require $file;
-            exit;
-        }
-    }
+    http_response_code(404);
+    echo json_encode(['error' => 'API endpoint not found']);
+    exit;
 }
 
-// Force all app routes through index.php
-$_GET['path'] = trim($uri, '/');
+// All other routes go through index.php with path parameter
+$_GET['path'] = ltrim($uri, '/');
 require __DIR__ . '/index.php';
