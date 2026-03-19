@@ -35,9 +35,10 @@ WORKDIR /var/www/html
 # Copy everything
 COPY . .
 
-# Clean Apache config and create our VirtualHost
+# Clean Apache config and create our VirtualHost that listens on PORT env var
 RUN rm -rf /etc/apache2/sites-enabled/* \
-    && echo '<VirtualHost *:80>' > /etc/apache2/sites-enabled/000-default.conf \
+    && echo 'Listen ${PORT:80}' > /etc/apache2/ports.conf \
+    && echo '<VirtualHost *:${PORT:80}>' > /etc/apache2/sites-enabled/000-default.conf \
     && echo '    DocumentRoot /var/www/html' >> /etc/apache2/sites-enabled/000-default.conf \
     && echo '    <Directory /var/www/html>' >> /etc/apache2/sites-enabled/000-default.conf \
     && echo '        Options -Indexes +FollowSymLinks' >> /etc/apache2/sites-enabled/000-default.conf \
@@ -58,8 +59,13 @@ RUN mkdir -p /var/www/html/_sessions \
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction || echo "Composer skipped"
 
-# Expose port
+# Copy and make start script executable
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Expose port from Railway or default to 80
+ENV PORT=80
 EXPOSE 80
 
-# Start Apache
-CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+# Start Apache with Railway PORT support
+CMD ["/start.sh"]
