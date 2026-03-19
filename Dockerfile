@@ -22,7 +22,16 @@ RUN mkdir -p _sessions storage/logs \
 # Configure Apache
 RUN a2enmod rewrite \
     && echo 'ServerName localhost' >> /etc/apache2/apache2.conf \
-    && echo 'PassEnv TELEGRAM_BOT_TOKEN TELEGRAM_BOT_USERNAME TELEGRAM_ADMIN_USERNAME TELEGRAM_ADMIN_ID TELEGRAM_ANNOUNCE_CHAT_ID APP_DEBUG APP_HOST DB_DSN DB_USER DB_PASS MYSQLHOST MYSQLPORT MYSQLUSER MYSQLPASSWORD MYSQLDATABASE' >> /etc/apache2/envvars
+    && echo 'export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"' >> /etc/apache2/envvars \
+    && echo 'export TELEGRAM_BOT_USERNAME="${TELEGRAM_BOT_USERNAME}"' >> /etc/apache2/envvars \
+    && echo 'export TELEGRAM_ADMIN_USERNAME="${TELEGRAM_ADMIN_USERNAME}"' >> /etc/apache2/envvars \
+    && echo 'export TELEGRAM_ADMIN_ID="${TELEGRAM_ADMIN_ID}"' >> /etc/apache2/envvars \
+    && echo 'export TELEGRAM_ANNOUNCE_CHAT_ID="${TELEGRAM_ANNOUNCE_CHAT_ID}"' >> /etc/apache2/envvars \
+    && echo 'export APP_DEBUG="${APP_DEBUG}"' >> /etc/apache2/envvars \
+    && echo 'export APP_HOST="${APP_HOST}"' >> /etc/apache2/envvars \
+    && echo 'export DB_DSN="${DB_DSN}"' >> /etc/apache2/envvars \
+    && echo 'export DB_USER="${DB_USER}"' >> /etc/apache2/envvars \
+    && echo 'export DB_PASS="${DB_PASS}"' >> /etc/apache2/envvars
 
 EXPOSE 8080
 
