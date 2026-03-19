@@ -1,51 +1,29 @@
-FROM php:8.2-cli
+FROM php:8.2-apache
 
-# Install system dependencies
+# Install extensions
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    zip \
-    unzip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip curl
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy everything
 COPY . .
 
-# Set permissions
-RUN mkdir -p /var/www/html/_sessions \
-    && mkdir -p /var/www/html/storage/logs \
-    && chmod -R 777 /var/www/html/storage \
-    && chmod -R 777 /var/www/html/_sessions \
-    && chmod -R 777 /var/www/html/vendor
+RUN mkdir -p _sessions storage/logs \
+    && chmod -R 777 _sessions storage logs vendor \
+    && composer install --no-dev --optimize-autoloader || true
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction || echo "Composer skipped"
+# Configure Apache to pass env vars to PHP
+RUN echo 'PassEnv TELEGRAM_BOT_TOKEN TELEGRAM_BOT_USERNAME TELEGRAM_ADMIN_USERNAME TELEGRAM_ADMIN_ID TELEGRAM_ANNOUNCE_CHAT_ID APP_DEBUG APP_HOST DB_DSN DB_USER DB_PASS MYSQLHOST MYSQLPORT MYSQLUSER MYSQLPASSWORD MYSQLDATABASE' >> /etc/apache2/envvars
 
-# Create startup script
-RUN echo '#!/bin/bash' > /start.sh && \
-    echo 'PORT="${PORT:-8080}"' >> /start.sh && \
-    echo 'echo "Starting PHP server on port $PORT"' >> /start.sh && \
-    echo 'php -S 0.0.0.0:$PORT -t /var/www/html' >> /start.sh && \
-    chmod +x /start.sh
+# Set proper directory permissions
+RUN a2enmod rewrite && echo 'ServerName localhost' >> /etc/apache2/apache2.conf
 
-# Expose port
 EXPOSE 8080
 
-# Start PHP built-in server
-CMD ["/start.sh"]
+CMD ["apache2-foreground"]
