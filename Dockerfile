@@ -19,8 +19,9 @@ RUN mkdir -p _sessions storage/logs \
     && chmod -R 777 _sessions storage vendor \
     && composer install --no-dev --optimize-autoloader || true
 
-# Configure Apache
-RUN a2enmod rewrite \
+# Fix MPM conflict - disable all MPMs first, then enable prefork
+RUN a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true \
+    && a2enmod mpm_prefork rewrite ssl headers \
     && echo 'ServerName localhost' >> /etc/apache2/apache2.conf \
     && echo 'export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"' >> /etc/apache2/envvars \
     && echo 'export TELEGRAM_BOT_USERNAME="${TELEGRAM_BOT_USERNAME}"' >> /etc/apache2/envvars \
