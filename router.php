@@ -26,5 +26,6 @@ if (strpos($uri, '/api/') === 0) {
     }
 }
 
-// App routes - everything goes through index.php
+// Force all app routes through index.php
+$_GET['path'] = trim($uri, '/');
 require __DIR__ . '/index.php';
