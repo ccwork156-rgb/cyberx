@@ -83,39 +83,54 @@ if ($missing) {
 }
 
 /* DB upsert */
-$pdo = Db::pdo();
-$res = Telegram::saveUser($pdo, $tgId, $tUser, $first, $last, $photo, 100);
-
-if (!($res['ok'] ?? false)) { 
-    tgdbg('500 saveUser failed'); 
-    http_response_code(500); 
-    echo json_encode(['error' => 'saveUser_failed', 'details' => $res]);
-    exit; 
-}
-
-$uid = (int)($res['id'] ?? 0);
-$status = strtolower((string)($res['status'] ?? 'free'));
-
-tgdbg("User saved: uid=$uid, status=$status");
-
-/* Expiry check */
+tgdbg("Attempting database connection...");
 try {
-    $st = $pdo->prepare("SELECT status, expiry_date FROM users WHERE id=:id LIMIT 1");
-    $st->execute([':id' => $uid]);
-    if ($row = $st->fetch(PDO::FETCH_ASSOC)) {
-        $exp = $row['expiry_date'] ?? null;
-        if ($exp) {
-            $expAt = new DateTime((string)$exp);
-            $now = new DateTime('now');
-            if ($expAt < $now) {
-                $pdo->prepare("UPDATE users SET status='free', credits=10, expiry_date=NULL WHERE id=:id")
-                    ->execute([':id'=>$uid]);
-                $status = 'free';
-            }
+    $pdo = Db::pdo();
+    if ($pdo === null) {
+        tgdbg("Database connection failed - continuing without DB");
+        // Continue without database - user can login but won't be saved
+        $uid = 0;
+        $status = 'free';
+    } else {
+        tgdbg("Database connected successfully");
+        $res = Telegram::saveUser($pdo, $tgId, $tUser, $first, $last, $photo, 100);
+
+        if (!($res['ok'] ?? false)) { 
+            tgdbg('saveUser failed'); 
+            $uid = 0;
+            $status = 'free';
+        } else {
+            $uid = (int)($res['id'] ?? 0);
+            $status = strtolower((string)($res['status'] ?? 'free'));
+            tgdbg("User saved: uid=$uid, status=$status");
         }
     }
-} catch (Throwable $e) { 
-    tgdbg('expiry check error: '.$e->getMessage()); 
+} catch (Throwable $e) {
+    tgdbg("DB error: " . $e->getMessage());
+    $uid = 0;
+    $status = 'free';
+}
+
+/* Expiry check */
+if ($pdo !== null && $uid > 0) {
+    try {
+        $st = $pdo->prepare("SELECT status, expiry_date FROM users WHERE id=:id LIMIT 1");
+        $st->execute([':id' => $uid]);
+        if ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+            $exp = $row['expiry_date'] ?? null;
+            if ($exp) {
+                $expAt = new DateTime((string)$exp);
+                $now = new DateTime('now');
+                if ($expAt < $now) {
+                    $pdo->prepare("UPDATE users SET status='free', credits=10, expiry_date=NULL WHERE id=:id")
+                        ->execute([':id'=>$uid]);
+                    $status = 'free';
+                }
+            }
+        }
+    } catch (Throwable $e) { 
+        tgdbg('expiry check error: '.$e->getMessage()); 
+    }
 }
 
 /* Session */

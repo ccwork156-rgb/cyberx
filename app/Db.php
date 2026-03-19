@@ -5,18 +5,22 @@ namespace App;
 
 final class Db
 {
-    public static function pdo(): \PDO
+    public static function pdo(): ?\PDO
     {
-        // .env থেকে নাও
-        $dsn  = $_ENV['DB_DSN']  ?? 'mysql:host=127.0.0.1;dbname=app;charset=utf8mb4';
-        $user = $_ENV['DB_USER'] ?? 'app_user';
-        $pass = $_ENV['DB_PASS'] ?? 'change_me';
+        // Railway environment variables
+        $host = $_ENV['MYSQLHOST'] ?? $_ENV['DB_HOST'] ?? '127.0.0.1';
+        $port = $_ENV['MYSQLPORT'] ?? '3306';
+        $dbname = $_ENV['MYSQLDATABASE'] ?? $_ENV['DB_NAME'] ?? 'railway';
+        $user = $_ENV['MYSQLUSER'] ?? $_ENV['DB_USER'] ?? 'root';
+        $pass = $_ENV['MYSQLPASSWORD'] ?? $_ENV['DB_PASS'] ?? '';
+        
+        // Build DSN
+        $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
 
-        // PDO / pdo_mysql না থাকলে 500 (সাইলেন্ট)
-        if (!class_exists(\PDO::class) || (str_starts_with($dsn, 'mysql:') && !in_array('mysql', \PDO::getAvailableDrivers(), true))) {
-            // error_log('PDO or pdo_mysql not available');
-            http_response_code(500);
-            exit;
+        // Check PDO available
+        if (!class_exists(\PDO::class)) {
+            error_log('PDO not available');
+            return null;
         }
 
         try {
@@ -24,18 +28,14 @@ final class Db
                 \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
                 \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
                 \PDO::ATTR_EMULATE_PREPARES   => false,
+                \PDO::ATTR_TIMEOUT            => 5,
+                \PDO::ATTR_CONNECTION_STATUS => true,
             ]);
-
-            if (str_starts_with($dsn, 'mysql:')) {
-                $pdo->exec("SET SESSION sql_mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
-                $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
-            }
 
             return $pdo;
         } catch (\PDOException $e) {
-            // error_log('DB connect error: ' . $e->getMessage());
-            http_response_code(500);
-            exit;
+            error_log('DB connect error: ' . $e->getMessage());
+            return null;
         }
     }
 }
