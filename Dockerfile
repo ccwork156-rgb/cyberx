@@ -29,33 +29,25 @@ WORKDIR /var/www/html
 COPY . .
 
 # Copy Nginx configuration
-COPY nginx.conf /etc/nginx/sites-available/default
-
-# Enable Nginx site (remove existing if present)
-RUN rm -f /etc/nginx/sites-enabled/default \
-    && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Create necessary directories
 RUN mkdir -p /var/www/html/_sessions \
     && mkdir -p /var/www/html/storage/logs \
     && mkdir -p /run/php \
+    && mkdir -p /var/log/nginx \
+    && mkdir -p /var/cache/nginx \
     && chmod -R 777 /var/www/html/storage \
     && chmod -R 777 /var/www/html/_sessions \
-    && chmod -R 777 /var/www/html/vendor
+    && chmod -R 777 /var/www/html/vendor \
+    && chmod -R 777 /var/log/nginx \
+    && chmod -R 777 /var/cache/nginx
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader || true
-
-# Expose port from Railway environment or default to 80
-ENV PORT=80
-
-# Create startup script
-RUN echo '#!/bin/bash \n\
-service php8.2-fpm start || php-fpm -D \n\
-nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
+RUN composer install --no-dev --optimize-autoloader || echo "Composer install skipped"
 
 # Expose port
 EXPOSE 80
 
-# Start services
-CMD ["/start.sh"]
+# Start script
+CMD service php8.2-fpm start && nginx -g "daemon off;"
