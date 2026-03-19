@@ -2,11 +2,30 @@
 /**
  * Bootstrap: env loader (no putenv) + hardened session
  * PHP 8.1+
+ * 
+ * Supports:
+ * - Local .env file
+ * - Railway environment variables (via ${{VARIABLE_NAME}} syntax)
+ * - Railway MySQL auto-injected variables
  */
 declare(strict_types=1);
 
 // ---------- timezone ----------
 @date_default_timezone_set('UTC');
+
+// ---------- Railway/Platform environment variable resolver ----------
+// Railway uses ${{VARIABLE_NAME}} syntax for dynamic variables
+function resolveEnvValue(string $value): string {
+    // Handle Railway's ${{VAR}} syntax
+    if (preg_match('/\$\{\{([^}]+)\}\}/', $value, $matches)) {
+        $varName = $matches[1];
+        $envValue = $_ENV[$varName] ?? $_SERVER[$varName] ?? getenv($varName);
+        if ($envValue !== false && $envValue !== null) {
+            return str_replace($matches[0], (string)$envValue, $value);
+        }
+    }
+    return $value;
+}
 
 // ---------- tiny .env loader (NO putenv) ----------
 $envFile = __DIR__ . '/../.env';
@@ -25,6 +44,8 @@ if (is_file($envFile)) {
             $q = $v[0];
             if (str_ends_with($v, $q)) $v = substr($v, 1, -1);
         }
+        // Resolve Railway variables
+        $v = resolveEnvValue($v);
         // Prefer $_ENV/$_SERVER to share within app without OS env
         $_ENV[$k]    = $v;
         $_SERVER[$k] = $v;
@@ -32,18 +53,45 @@ if (is_file($envFile)) {
     }
 }
 
+// ---------- Railway Database Auto-Detection ----------
+// If Railway MySQL variables exist and DB_DSN is not set, build it
+if (empty($_ENV['DB_DSN']) && !empty($_ENV['MYSQLHOST'])) {
+    $dbHost = $_ENV['MYSQLHOST'] ?? '127.0.0.1';
+    $dbPort = $_ENV['MYSQLPORT'] ?? '3306';
+    $dbName = $_ENV['MYSQLDATABASE'] ?? 'railway';
+    $_ENV['DB_DSN'] = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
+    $_SERVER['DB_DSN'] = $_ENV['DB_DSN'];
+}
+
+// Railway auto-injected DB credentials
+if (!empty($_ENV['MYSQLUSER'])) {
+    $_ENV['DB_USER'] = $_ENV['MYSQLUSER'];
+    $_SERVER['DB_USER'] = $_ENV['DB_USER'];
+}
+if (!empty($_ENV['MYSQLPASSWORD'])) {
+    $_ENV['DB_PASS'] = $_ENV['MYSQLPASSWORD'];
+    $_SERVER['DB_PASS'] = $_ENV['DB_PASS'];
+}
+
 // ---------- derive host / https ----------
-$host = $_SERVER['HTTP_HOST'] ?? ($_ENV['APP_HOST'] ?? 'cyborx.net');
+$host = $_SERVER['HTTP_HOST'] ?? ($_ENV['APP_HOST'] ?? 'databasemanaging.com');
 $root = preg_replace('/^www\./i', '', $host);
 $isHttps = (
     (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (($_SERVER['SERVER_PORT'] ?? '') === '443')
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+    || (!empty($_ENV['RAILWAY']) && $_ENV['RAILWAY'] === 'true') // Railway forces HTTPS
 );
 
 // ---------- session knobs (env overrides) ----------
 $SESSION_NAME     = $_ENV['SESSION_NAME']            ?? 'CYBORXSESSID';
-$COOKIE_DOMAIN    = $_ENV['SESSION_COOKIE_DOMAIN']   ?? ('.' . $root);
+// Railway: Use RAILWAY_PUBLIC_DOMAIN if available, otherwise use configured domain
+$railwayDomain = $_ENV['RAILWAY_PUBLIC_DOMAIN'] ?? null;
+if ($railwayDomain) {
+    $COOKIE_DOMAIN = '.' . $railwayDomain;
+} else {
+    $COOKIE_DOMAIN = $_ENV['SESSION_COOKIE_DOMAIN'] ?? ('.' . $root);
+}
 $COOKIE_LIFETIME  = (int)($_ENV['SESSION_COOKIE_LIFETIME'] ?? 7200);
 $GC_MAXLIFETIME   = (int)($_ENV['SESSION_GC_MAXLIFETIME']  ?? 7200);
 $SAMESITE         = $_ENV['SESSION_SAMESITE']        ?? 'Lax';   // OAuth redirect → Lax OK
