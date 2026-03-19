@@ -29,6 +29,10 @@ function resolveEnvValue(string $value): string {
 
 // ---------- tiny .env loader (NO putenv) ----------
 $envFile = __DIR__ . '/../.env';
+
+// Railway variables already in $_ENV from Docker, don't override them
+$railwayVars = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_BOT_USERNAME', 'DB_DSN', 'DB_USER', 'DB_PASS', 'MYSQLHOST', 'MYSQLPORT', 'MYSQLUSER', 'MYSQLPASSWORD', 'MYSQLDATABASE'];
+
 if (is_file($envFile)) {
     $lines = @file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
     foreach ($lines as $raw) {
@@ -38,6 +42,10 @@ if (is_file($envFile)) {
 
         [$k, $v] = explode('=', $t, 2);
         $k = trim($k);
+        
+        // Skip if already set by Railway (environment variables take precedence)
+        if (in_array($k, $railwayVars, true) && !empty($_ENV[$k])) continue;
+        
         // strip wrapping quotes & whitespace
         $v = trim($v);
         if ($v !== '' && ($v[0] === '"' || $v[0] === "'")) {
