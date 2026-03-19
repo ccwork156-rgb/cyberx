@@ -1,2 +1,3 @@
 #!/bin/bash
-php -S 0.0.0.0:8080 -t /var/www/html /var/www/html/router.php
+cd /var/www/html
+exec php -S 0.0.0.0:8080 -t /var/www/html router.php
