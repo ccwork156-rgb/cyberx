@@ -19,7 +19,11 @@ RUN mkdir -p _sessions storage/logs \
     && chmod -R 777 _sessions storage vendor \
     && composer install --no-dev --optimize-autoloader || true
 
+# Copy and make start script executable
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 EXPOSE 8080
 
-# Start PHP built-in server with router
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "/var/www/html", "/var/www/html/router.php"]
+# Start PHP server with router
+CMD ["/start.sh"]
