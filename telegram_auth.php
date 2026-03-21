@@ -38,11 +38,14 @@ if ($botToken === '' || !isset($_GET['hash'])) {
     exit; 
 }
 
-if (!Telegram::verify($_GET, $botToken, 900)) { 
-    tgdbg('400 verify fail'); 
-    http_response_code(400); 
-    echo json_encode(['error' => 'verify_failed']);
-    exit; 
+if (!Telegram::verify($_GET, $botToken, 900)) {
+    tgdbg('400 verify fail');
+    tgdbg('Bot token length: ' . strlen($botToken));
+    tgdbg('Auth date: ' . ($_GET['auth_date'] ?? 'missing'));
+    tgdbg('Time diff: ' . (time() - (int)($_GET['auth_date'] ?? '0')));
+    http_response_code(400);
+    echo json_encode(['error' => 'verify_failed', 'debug' => 'Check bot token and auth_date']);
+    exit;
 }
 
 /* Extract from Telegram Login Widget */
